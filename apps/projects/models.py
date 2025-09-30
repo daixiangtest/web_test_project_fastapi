@@ -28,7 +28,7 @@ class TestEnv(models.Model):
     create_time=fields.DatetimeField(auto_now_add=True,description="测试环境创建时间")
     project=fields.ForeignKeyField("models.TestProject",related_name="envs",description="测试环境所属项目")
     host=fields.CharField(max_length=100,description="测试环境地址")
-    global_vars=fields.TextField(description="全局变量",default=dict)
+    global_vars=fields.JSONField(description="全局变量",default=dict)
     def __str__(self):
         return self.name
     class Meta:
