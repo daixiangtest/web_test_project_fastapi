@@ -1,7 +1,11 @@
 """接口函数定义"""
 
 from fastapi import APIRouter, HTTPException
-from apps.users.parameter import RegisterParam, LoginParam, UserInfoParam,LoginResult,TokenParam
+from fastapi.openapi.models import OAuth2
+from fastapi.params import Depends
+from fastapi.security import OAuth2PasswordRequestForm
+
+from apps.users.parameter import RegisterParam, LoginParam, UserInfoParam, LoginResult, TokenParam, TokenParamDocs
 from apps.users.models import Users
 from comms.auth import get_password_hash, verify_password, create_token, verify_token
 
@@ -38,6 +42,25 @@ async def login(item: LoginParam):
     else:
         raise HTTPException(status_code=400, detail="用户不存在")
 
+@user_router.post("/login_docs", description="用户登录接口文档调用", response_model=TokenParamDocs)
+async def login_docs(item: OAuth2PasswordRequestForm=Depends()):
+    """
+    用户登录接口文档调用
+    :param item: 登录参数
+    :return: token
+    """
+    user = await Users.get_or_none(username=item.username)
+    if user:
+        res = verify_password(item.password, user.password)
+        if res:
+            # 生成token
+            user_info = UserInfoParam(**user.__dict__)
+            token = create_token(user_info.model_dump())
+            return TokenParamDocs(access_token=token, token_type="Bearer")
+        else:
+            raise HTTPException(status_code=400, detail="密码错误")
+    else:
+        raise HTTPException(status_code=400, detail="用户不存在")
 # token校验
 @user_router.post("/verify", description="token校验", response_model=LoginResult)
 async def token_verify(item: TokenParam):

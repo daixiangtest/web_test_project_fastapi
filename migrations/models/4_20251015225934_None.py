@@ -38,10 +38,29 @@ CREATE TABLE IF NOT EXISTS `test_env` (
     `name` VARCHAR(50) NOT NULL COMMENT '测试环境名称',
     `create_time` DATETIME(6) NOT NULL COMMENT '测试环境创建时间' DEFAULT CURRENT_TIMESTAMP(6),
     `host` VARCHAR(100) NOT NULL COMMENT '测试环境地址',
-    `global_vars` LONGTEXT NOT NULL COMMENT '全局变量',
+    `global_vars` JSON NOT NULL COMMENT '全局变量',
     `project_id` INT NOT NULL COMMENT '测试环境所属项目',
     CONSTRAINT `fk_test_env_test_pro_f21b8019` FOREIGN KEY (`project_id`) REFERENCES `test_project` (`id`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4 COMMENT='测试环境表';"""
+) CHARACTER SET utf8mb4 COMMENT='测试环境表';
+CREATE TABLE IF NOT EXISTS `test_cases` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT '用例id',
+    `name` VARCHAR(100) NOT NULL COMMENT '用例名称',
+    `create_time` DATETIME(6) NOT NULL COMMENT '创建时间' DEFAULT CURRENT_TIMESTAMP(6),
+    `steps` JSON COMMENT '用例步骤',
+    `project_id` INT NOT NULL COMMENT '项目id',
+    CONSTRAINT `fk_test_cas_test_pro_16b6e59b` FOREIGN KEY (`project_id`) REFERENCES `test_project` (`id`) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COMMENT='测试用例表';
+CREATE TABLE IF NOT EXISTS `test_suites` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT '套件id',
+    `name` VARCHAR(100) NOT NULL COMMENT '套件名称',
+    `create_time` DATETIME(6) NOT NULL COMMENT '创建时间' DEFAULT CURRENT_TIMESTAMP(6),
+    `suite_setup_step` JSON NOT NULL COMMENT '套件前置步骤',
+    `suite_type` VARCHAR(50) NOT NULL COMMENT '套件类型' DEFAULT '功能',
+    `modules_id` INT COMMENT '模块id',
+    `project_id` INT NOT NULL COMMENT '项目id',
+    CONSTRAINT `fk_test_sui_project__084e6d65` FOREIGN KEY (`modules_id`) REFERENCES `project_module` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_test_sui_test_pro_9423c086` FOREIGN KEY (`project_id`) REFERENCES `test_project` (`id`) ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COMMENT='测试套件表';"""
 
 
 async def downgrade(db: BaseDBAsyncClient) -> str:

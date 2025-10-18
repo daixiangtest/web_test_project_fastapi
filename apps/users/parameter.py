@@ -13,6 +13,14 @@ class LoginParam(BaseModel):
     username:str= Field( description="用户名",max_length=20,min_length=6)
     password:str= Field( description="密码",max_length=20,min_length=6)
 
+class TokenParamDocs(BaseModel):
+    """
+    登录参数接口文档使用
+    """
+    access_token: str=Field( description="访问令牌")
+    token_type: str=Field( description="令牌类型")
+
+
 class RegisterParam(LoginParam):
     """
     注册册数

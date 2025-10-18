@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from starlette.config import Config
 from tortoise.contrib.fastapi import register_tortoise
-
+from apps.cases.api import test_router
 from apps.users.api import user_router
 from apps.projects.api import pro_router
 from comms.settings import TORTOISE_ORM
@@ -15,6 +15,7 @@ app = FastAPI(
 # 注册路由
 app.include_router(user_router)
 app.include_router(pro_router)
+app.include_router(test_router)
 
 # 注册数据模型
 register_tortoise(app, config=TORTOISE_ORM)

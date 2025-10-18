@@ -14,6 +14,7 @@ db_config = {
 db_models = [
     "apps.users.models",
     "apps.projects.models",
+    "apps.cases.models",
 ]
 # 数据库连接
 TORTOISE_ORM = {

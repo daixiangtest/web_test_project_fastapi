@@ -12,8 +12,8 @@ from comms.settings import SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 
-# fastAPI 默认的请求登录接口的方法
-oatu2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login")
+# fastAPI 接口文档的请求登录接口的地址
+oatu2_scheme = OAuth2PasswordBearer(tokenUrl="/api/users/login_docs")
 
 async def is_authenticated(token: str = Depends(oatu2_scheme)):
     """

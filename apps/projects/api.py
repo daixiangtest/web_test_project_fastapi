@@ -1,8 +1,8 @@
 """接口函数定义"""
 
 from fastapi import APIRouter, HTTPException, Depends
-from apps.projects.parameter import ProjectParam, ProjectResult, TestEnvParam, AddEnvParam, UpdateEnvParam
-from apps.projects.models import TestProject, TestEnv
+from apps.projects.parameter import ProjectParam, ProjectResult, TestEnvParam, AddEnvParam, UpdateEnvParam,ProjectModuleParam,AddModuleParam,UpdateModuleParam
+from apps.projects.models import TestProject, TestEnv,ProjectModule
 from apps.users.models import Users
 from comms.auth import is_authenticated
 
@@ -101,3 +101,44 @@ async def update_env(env_id: int, item: UpdateEnvParam, user_info: Users = Depen
     env = await env.update_from_dict(item.model_dump(exclude_unset=True))
     await env.save()
     return TestEnvParam(**env.__dict__)
+
+
+@pro_router.post("/modules", response_model=ProjectModuleParam, description="创建项目模块")
+async def create_module(item: AddModuleParam, user_info: Users = Depends(is_authenticated)):
+    """创建项目模块"""
+    project = await TestProject.get_or_none(id=item.project_id)
+    if project:
+        module = await ProjectModule.create(**item.model_dump())
+    else:
+        raise HTTPException(status_code=405, detail="项目不存在")
+    return ProjectModuleParam(**module.__dict__)
+
+@pro_router.get("/modules", response_model=list[ProjectModuleParam], description="获取项目模块列表")
+async def get_modules(project_id: int, user_info: Users = Depends(is_authenticated)):
+    """获取项目模块列表"""
+    modules = await ProjectModule.filter(project=project_id)
+    return [ProjectModuleParam(**module.__dict__) for module in modules]
+@pro_router.get("/modules/{module_id}", response_model=ProjectModuleParam, description="获取项目模块详情")
+async def get_module(module_id: int, user_info: Users = Depends(is_authenticated)):
+    """获取项目模块详情"""
+    module = await ProjectModule.get_or_none(id=module_id)
+    if not module:
+        raise HTTPException(status_code=405, detail="模块不存在")
+    return ProjectModuleParam(**module.__dict__)
+@pro_router.delete("/modules/{module_id}", description="删除项目模块", status_code=204)
+async def delete_module(module_id: int, user_info: Users = Depends(is_authenticated)):
+    """删除项目模块"""
+    module = await ProjectModule.get_or_none(id=module_id)
+    if not module:
+        raise HTTPException(status_code=405, detail="模块不存在")
+    await module.delete()
+    return None
+@pro_router.put("/modules/{module_id}", response_model=ProjectModuleParam, description="更新项目模块")
+async def update_module(module_id: int, item: UpdateModuleParam, user_info: Users = Depends(is_authenticated)):
+    """更新项目模块"""
+    module = await ProjectModule.get_or_none(id=module_id)
+    if not module:
+        raise HTTPException(status_code=405, detail="模块不存在")
+    module.name=item.name
+    await module.save()
+    return ProjectModuleParam(**module.__dict__)
