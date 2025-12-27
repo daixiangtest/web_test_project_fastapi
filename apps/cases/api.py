@@ -216,6 +216,7 @@ async def get_suite_cases(suite_id:int):
     :return: 套件中的测试用例列表
     """
     que=SuiteToCase.all()
+    # prefetch_related 预加载关联表数据
     que=que.filter(test_suite_id=suite_id).prefetch_related("test_case","test_suite").order_by("sort")
     suite_to_cases=await que.all()
     result=[]

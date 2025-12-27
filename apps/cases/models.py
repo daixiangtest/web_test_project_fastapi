@@ -26,7 +26,7 @@ class TestSuites(models.Model):
     name = fields.CharField(max_length=100, description="套件名称")
     create_time = fields.DatetimeField(auto_now_add=True, description="创建时间")
     project = fields.ForeignKeyField("models.TestProject", related_name="test_suites", description="项目id")
-    modules = fields.ForeignKeyField("models.ProjectModule", related_name="test_suites", description="模块id", null=True,Blank= True)
+    modules = fields.ForeignKeyField("models.ProjectModule", related_name="test_suites", description="模块id", null=True,blank= True)
     suite_setup_step = fields.JSONField(description="套件前置步骤",default=list)
     # 套件类型 choices 规定字段的可选值和对应的枚举映射
     suite_type=fields.CharField(max_length=50,description="套件类型",choices=[(1,"功能"),(2,"业务流")],default="功能")

@@ -1,7 +1,8 @@
 """接口函数定义"""
-
+from django.db.models.expressions import result
 from fastapi import APIRouter, HTTPException, Depends
-from apps.projects.parameter import ProjectParam, ProjectResult, TestEnvParam, AddEnvParam, UpdateEnvParam,ProjectModuleParam,AddModuleParam,UpdateModuleParam
+from apps.projects.parameter import ProjectParam, ProjectResult, TestEnvParam, AddEnvParam, UpdateEnvParam, \
+    ProjectModuleParam, AddModuleParam, UpdateModuleParam, ProjectListParam, ProjectModuleListParam, TestEnvListParam
 from apps.projects.models import TestProject, TestEnv,ProjectModule
 from apps.users.models import Users
 from comms.auth import is_authenticated
@@ -16,12 +17,21 @@ async def create_project(item: ProjectParam, user_info: Users = Depends(is_authe
     return ProjectResult(**project.__dict__)
 
 
-@pro_router.get("/projects", response_model=list[ProjectResult], description="获取项目列表")
-async def get_projects(user_info: Users = Depends(is_authenticated)):
+@pro_router.get("/projects", response_model=ProjectListParam, description="获取项目列表")
+async def get_projects(page: int|None = None,size : int|None = None,user_info: Users = Depends(is_authenticated)):
     """获取项目列表"""
     # 通过用户id项目列表
-    projects = await TestProject.filter(user_info=user_info.id)
-    return [ProjectResult(**project.__dict__) for project in projects]
+    projects = TestProject.filter(user_info=user_info.id)
+    total=await projects.count()
+    if page is None or size is None:
+        datas=await projects.all().order_by("-id")
+        size=0
+        page=0
+    else:
+        datas=await projects.offset((page - 1) * size).limit( size).order_by("-id")
+    # projects = await TestProject.filter(user_info=user_info.id).offset((page - 1) * size).limit( size)
+    return ProjectListParam(total=total,datas=[ProjectResult(**data.__dict__) for data in datas],page=page,size=size)
+
 
 
 @pro_router.get("/projects/{project_id}", response_model=ProjectResult, description="获取项目详情")
@@ -60,11 +70,14 @@ async def create_env(item: AddEnvParam, user_info: Users = Depends(is_authentica
     return TestEnvParam(**env.__dict__)
 
 
-@pro_router.get("/envs", response_model=list[TestEnvParam], description="获取测试环境列表")
-async def get_envs(project_id: int, user_info: Users = Depends(is_authenticated)):
+@pro_router.get("/envs", response_model=TestEnvListParam, description="获取测试环境列表")
+async def get_envs(project_id: int,page: int|None = 1,size : int|None = 10, user_info: Users = Depends(is_authenticated)):
     """获取测试环境列表"""
-    envs = await TestEnv.filter(project=project_id)
-    return [TestEnvParam(**env.__dict__) for env in envs]
+    envs = TestEnv.filter(project=project_id)
+    total = await envs.count()
+    envs = await envs.offset((project_id - 1) * size).limit( size).order_by("-id")
+    resp={"total": total, "page": page, "size": size, "datas": [TestEnvParam(**env.__dict__) for env in envs]}
+    return resp
 
 
 @pro_router.get("/envs/{env_id}", response_model=TestEnvParam, description="获取测试环境详情")
@@ -113,11 +126,30 @@ async def create_module(item: AddModuleParam, user_info: Users = Depends(is_auth
         raise HTTPException(status_code=405, detail="项目不存在")
     return ProjectModuleParam(**module.__dict__)
 
-@pro_router.get("/modules", response_model=list[ProjectModuleParam], description="获取项目模块列表")
-async def get_modules(project_id: int, user_info: Users = Depends(is_authenticated)):
+@pro_router.get("/modules", response_model=ProjectModuleListParam, description="获取项目模块列表")
+async def get_modules(project_id: int,page: int|None = 1,size : int|None = 10, user_info: Users = Depends(is_authenticated)):
     """获取项目模块列表"""
-    modules = await ProjectModule.filter(project=project_id)
-    return [ProjectModuleParam(**module.__dict__) for module in modules]
+    moduls=ProjectModule.filter(project=project_id).prefetch_related('test_suites')
+    total =await moduls.count()
+    modules = await moduls.offset((page - 1) * size).limit( size).order_by("-id")
+    datas=[]
+    for module in modules:
+        suite_count=await module.test_suites.all().count()
+        data={"id":module.id,
+              "name":module.name,
+              "project_id":module.project_id,
+              "create_time":module.create_time,
+              "suite_count":suite_count}
+        datas.append(data)
+    results={
+        "total":total,
+        "datas":datas,
+        "page":page,
+        "size":size
+    }
+    return ProjectModuleListParam(**results)
+
+
 @pro_router.get("/modules/{module_id}", response_model=ProjectModuleParam, description="获取项目模块详情")
 async def get_module(module_id: int, user_info: Users = Depends(is_authenticated)):
     """获取项目模块详情"""
