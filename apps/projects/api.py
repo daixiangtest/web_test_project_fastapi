@@ -58,7 +58,7 @@ async def delete_project(project_id: int, user_info: Users = Depends(is_authenti
     return None
 
 
-@pro_router.post("/envs", response_model=TestEnvParam, description="创建测试环境", status_code=201)
+@pro_router.post("/envs", response_model=TestEnvParam, description="创建测试环境")
 async def create_env(item: AddEnvParam, user_info: Users = Depends(is_authenticated)):
     """创建测试环境"""
     # env = await TestEnv.create(**item.model_dump())

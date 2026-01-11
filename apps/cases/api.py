@@ -1,12 +1,15 @@
 """接口函数定义"""
-
+from Tools.demo.sortvisu import steps
+from django.db.models.expressions import result
 from fastapi import APIRouter, HTTPException, Depends
 
 from apps.projects.models import TestProject, ProjectModule
+from apps.runner.models import CaseRecords
 from apps.users.models import Users
 from comms.auth import is_authenticated
 from apps.cases.parameter import SuiteParam, AddSuiteParam, UpdateSuiteParam, CasesParam, AddCasesParam, \
-    UpdateCasesParam, SuiteToCasesParam, AddSuiteToCasesParam, SuiteToCasesListParam, UpdateSuiteToCasesParam
+    UpdateCasesParam, SuiteToCasesParam, AddSuiteToCasesParam, SuiteToCasesListParam, UpdateSuiteToCasesParam, \
+    CasesListParam, CaseInfo
 from apps.cases.models import TestCases, TestSuites, SuiteToCase
 
 # 路由注册添加依赖项中添加用户权限校验
@@ -105,12 +108,25 @@ async def add_cases(cases:AddCasesParam):
     project=await TestProject.get_or_none(id=cases.project_id)
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
-    cases=await TestCases.create(name=cases.name,project_id=cases.project_id)
+    count_case = await TestCases.filter(name=cases.name, project=project).count()
+    if count_case > 0:
+        raise HTTPException(status_code=401, detail="用例名称已存在")
+        # 将 steps 转换为字典列表以便JSON序列化
+    steps_data = []
+    if cases.steps:
+        for step in cases.steps:
+            if hasattr(step, '__dict__'):
+                steps_data.append(step.__dict__)
+            else:
+                steps_data.append(dict(step))
+    cases=await TestCases.create(name=cases.name,project_id=cases.project_id,steps=steps_data)
     return CasesParam(**cases.__dict__)
-@test_router.get("/cases",response_model=list[CasesParam],description="获取测试用例列表")
-async def get_cases(project_id:int|None=None):
+@test_router.get("/cases",response_model=CasesListParam,description="获取测试用例列表")
+async def get_cases(project_id:int|None=None,size:int=10,page:int=1):
     """
     获取测试用例列表
+    :param page:
+    :param size:
     :param project_id: 项目id
     :param user: 当前用户
     :return: 测试用例列表
@@ -119,8 +135,28 @@ async def get_cases(project_id:int|None=None):
     project=await TestProject.get_or_none(id=project_id)
     if project:
         que=que.filter(project_id=project_id)
-    cases=await que.all()
-    return [CasesParam(**case.__dict__) for case in cases]
+    total=await que.count()
+    cases=await que.all().offset((page-1)*size).limit( size).order_by("-id")
+    cases_data = []
+    for case in cases:
+        # 获取用例的执行记录
+        records = CaseRecords.filter(case=case)
+        record_total = await records.count()
+        record=await records.order_by("-id").first()
+        state=record.status if record else "未执行"
+        case_dict = {
+            'id': case.id,
+            'name': case.name,
+            'project_id': case.project_id,
+            'create_time': case.create_time,
+            'steps': case.steps,
+            'record_total': record_total,
+            'state': state,
+            'step_count': len(case.steps)
+        }
+        cases_data.append(CaseInfo(**case_dict))
+    result=CasesListParam(total=total,size=size,page=page,datas=cases_data)
+    return result
 @test_router.get("/cases/{cases_id}",response_model=CasesParam,description="获取测试用例详情")
 async def get_cases_detail(cases_id:int):
     """
@@ -170,10 +206,11 @@ async def copy_cases(cases_id:int):
     :param user: 当前用户
     :return: None
     """
+
     cases_obj=await TestCases.get_or_none(id=cases_id)
     if not cases_obj:
         raise HTTPException(status_code=404, detail="测试用例不存在")
-    cases=await TestCases.create(name=cases_obj.name,project_id=cases_obj.project_id,steps=cases_obj.steps)
+    cases=await TestCases.create(name=f"{cases_obj.name}-副本",project_id=cases_obj.project_id,steps=cases_obj.steps)
     return CasesParam(**cases.__dict__)
 
 @test_router.post("/suite/{suite_id}/cases",response_model=SuiteToCasesParam,description="套件中添加测试用例")

@@ -55,19 +55,46 @@ class CasesParam(BaseModel):
     project_id: int=Field( description="所属项目id")
     steps: list=Field( description="用例步骤",default=[])
 
+class CaseInfo(CasesParam):
+    """
+    测试用例信息结构体
+    """
+    record_total:int=Field( description="执行记录总数")
+    state: str=Field( description="最新执行用例状态")
+    step_count: int=Field( description="步骤总数")
+
+class CasesListParam(BaseModel):
+    """
+    测试用例列表参数结构体
+    """
+    total: int=Field( description="总数")
+    page: int=Field( description="页码")
+    size: int=Field( description="页大小")
+    datas: List[CaseInfo]=Field( description="数据")
+
+class StepParam(BaseModel):
+    """
+    用例执行步骤参数
+    """
+    keyword: str=Field( description="关键字"),
+    desc:str=Field( description="描述"),
+    method:str= Field( description="操作方法"),
+    params:dict = Field( description="参数",default={})
+
 class AddCasesParam(BaseModel):
     """
     添加测试用例参数结构体
     """
     name: str=Field( description="用例名称")
     project_id: int=Field( description="所属项目id")
+    steps: list[StepParam]| None=Field( description="用例步骤",default=[])
 
 class UpdateCasesParam(BaseModel):
     """
     更新测试用例参数结构体
     """
     name: str|None=Field( description="用例名称",default=None)
-    steps: list|None=Field( description="用例步骤",default=[])
+    steps: list[StepParam]|None=Field( description="用例步骤",default=[])
 
 class SuiteToCasesParam(BaseModel):
     """

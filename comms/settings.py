@@ -12,6 +12,7 @@
 # }
 db_config = {
     "host": "127.0.0.1",
+    # "host":"9706ih4dm038.vicp.fun",
     "port": 3306,
     "user": "root",
     "password": "123456",
